@@ -167,9 +167,9 @@ services:
     healthcheck:
       test: curl -f http://localhost:3000/health || exit 1
       interval: 10s
-      start_period: 30s
+      start_period: 120s
       timeout: 60s
-      start_interval: 2s
+      start_interval: 5s
     environment:
       <<: [*backend-env, *backend-urls]
     volumes:
