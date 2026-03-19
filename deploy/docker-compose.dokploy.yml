@@ -175,39 +175,6 @@ services:
     volumes:
       - lago_storage_data:/app/storage
       - lago_rsa_data:/app/config/keys
-    labels:
-      - "traefik.enable=true"
-
-      # API Routes (/api/ → strip prefix → backend:3000)
-      - "traefik.http.routers.lago-api.priority=100"
-      - "traefik.http.routers.lago-api.entrypoints=websecure"
-      - "traefik.http.routers.lago-api.rule=Host(`${LAGO_DOMAIN}`) && PathPrefix(`/api/`)"
-      - "traefik.http.routers.lago-api.middlewares=lago-api-stripprefix"
-      - "traefik.http.middlewares.lago-api-stripprefix.stripprefix.prefixes=/api"
-      - "traefik.http.routers.lago-api.tls=true"
-      - "traefik.http.routers.lago-api.service=lago-api-service"
-      - "traefik.http.services.lago-api-service.loadbalancer.server.port=3000"
-
-      # API Versioned Routes (/api/v* → no strip, direct to backend)
-      - "traefik.http.routers.lago-api-versioned.priority=110"
-      - "traefik.http.routers.lago-api-versioned.entrypoints=websecure"
-      - "traefik.http.routers.lago-api-versioned.rule=Host(`${LAGO_DOMAIN}`) && PathPrefix(`/api/v`)"
-      - "traefik.http.routers.lago-api-versioned.tls=true"
-      - "traefik.http.routers.lago-api-versioned.service=lago-api-service"
-
-      # Rails Assets
-      - "traefik.http.routers.lago-api-rails.priority=100"
-      - "traefik.http.routers.lago-api-rails.entrypoints=websecure"
-      - "traefik.http.routers.lago-api-rails.rule=Host(`${LAGO_DOMAIN}`) && PathPrefix(`/rails`)"
-      - "traefik.http.routers.lago-api-rails.tls=true"
-      - "traefik.http.routers.lago-api-rails.service=lago-api-service"
-
-      # GraphQL
-      - "traefik.http.routers.lago-graphql.priority=100"
-      - "traefik.http.routers.lago-graphql.entrypoints=websecure"
-      - "traefik.http.routers.lago-graphql.rule=Host(`${LAGO_DOMAIN}`) && Path(`/graphql`)"
-      - "traefik.http.routers.lago-graphql.tls=true"
-      - "traefik.http.routers.lago-graphql.service=lago-api-service"
     networks:
       - default
       - dokploy-network
@@ -221,13 +188,6 @@ services:
         condition: service_healthy
     environment:
       <<: [*frontend-env]
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.lago-front.priority=50"
-      - "traefik.http.routers.lago-front.entrypoints=websecure"
-      - "traefik.http.routers.lago-front.rule=Host(`${LAGO_DOMAIN}`)"
-      - "traefik.http.routers.lago-front.tls=true"
-      - "traefik.http.services.lago-front.loadbalancer.server.port=80"
     networks:
       - default
       - dokploy-network
