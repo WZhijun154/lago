@@ -36,8 +36,8 @@ x-backend-urls: &backend-urls
   LAGO_API_URL: https://${LAGO_DOMAIN}/api
 
 x-backend-environment: &backend-env
-  DATABASE_URL: postgresql://${POSTGRES_USER:-lago}:${POSTGRES_PASSWORD:-changeme}@db:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-lago}?search_path=${POSTGRES_SCHEMA:-public}
-  REDIS_URL: redis://redis:${REDIS_PORT:-6379}
+  DATABASE_URL: postgresql://${POSTGRES_USER:-lago}:${POSTGRES_PASSWORD:-changeme}@lago-db:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-lago}?search_path=${POSTGRES_SCHEMA:-public}
+  REDIS_URL: redis://lago-redis:${REDIS_PORT:-6379}
   REDIS_PASSWORD: ${REDIS_PASSWORD:-}
   SECRET_KEY_BASE: ${SECRET_KEY_BASE:-your-secret-key-base-hex-64}
   RAILS_ENV: production
@@ -61,8 +61,8 @@ x-backend-environment: &backend-env
   LAGO_SMTP_PORT: ${LAGO_SMTP_PORT:-587}
   LAGO_SMTP_USERNAME: ${LAGO_SMTP_USERNAME:-}
   LAGO_SMTP_PASSWORD: ${LAGO_SMTP_PASSWORD:-}
-  LAGO_PDF_URL: http://pdf:3000
-  LAGO_REDIS_CACHE_URL: redis://redis:${LAGO_REDIS_CACHE_PORT:-6379}
+  LAGO_PDF_URL: http://lago-pdf:3000
+  LAGO_REDIS_CACHE_URL: redis://lago-redis:${LAGO_REDIS_CACHE_PORT:-6379}
   LAGO_REDIS_CACHE_PASSWORD: ${LAGO_REDIS_CACHE_PASSWORD:-}
   LAGO_REDIS_CABLE_URL: ${LAGO_REDIS_CABLE_URL:-}
   LAGO_DISABLE_SEGMENT: ${LAGO_DISABLE_SEGMENT:-true}
@@ -88,7 +88,7 @@ networks:
     external: true
 
 services:
-  db:
+  lago-db:
     <<: *postgres-image
     container_name: lago-db
     restart: unless-stopped
@@ -113,7 +113,7 @@ services:
     networks:
       - default
 
-  redis:
+  lago-redis:
     <<: *redis-image
     container_name: lago-redis
     restart: unless-stopped
@@ -128,7 +128,7 @@ services:
     networks:
       - default
 
-  rsa-keys:
+  lago-rsa-keys:
     <<: *backend-image
     container_name: lago-rsa-keys
     command: ["./scripts/generate.rsa.sh"]
@@ -137,12 +137,12 @@ services:
     networks:
       - default
 
-  migrate:
+  lago-migrate:
     <<: *backend-image
     container_name: lago-migrate
     restart: "no"
     depends_on:
-      db:
+      lago-db:
         condition: service_healthy
     command: ["./scripts/migrate.sh"]
     volumes:
@@ -152,16 +152,16 @@ services:
     networks:
       - default
 
-  api:
+  lago-api:
     <<: *backend-image
     container_name: lago-api
     restart: unless-stopped
     depends_on:
-      migrate:
+      lago-migrate:
         condition: service_completed_successfully
-      db:
+      lago-db:
         condition: service_healthy
-      redis:
+      lago-redis:
         condition: service_healthy
     command: ["./scripts/start.api.sh"]
     healthcheck:
@@ -179,12 +179,12 @@ services:
       - default
       - dokploy-network
 
-  front:
+  lago-front:
     <<: *frontend-image
     container_name: lago-front
     restart: unless-stopped
     depends_on:
-      api:
+      lago-api:
         condition: service_healthy
     environment:
       <<: [*frontend-env]
@@ -192,16 +192,16 @@ services:
       - default
       - dokploy-network
 
-  worker:
+  lago-worker:
     <<: *backend-image
     container_name: lago-worker
     restart: unless-stopped
     depends_on:
-      migrate:
+      lago-migrate:
         condition: service_completed_successfully
-      db:
+      lago-db:
         condition: service_healthy
-      redis:
+      lago-redis:
         condition: service_healthy
     command: ["./scripts/start.worker.sh"]
     healthcheck:
@@ -220,16 +220,16 @@ services:
     networks:
       - default
 
-  clock:
+  lago-clock:
     <<: *backend-image
     container_name: lago-clock
     restart: unless-stopped
     depends_on:
-      migrate:
+      lago-migrate:
         condition: service_completed_successfully
-      db:
+      lago-db:
         condition: service_healthy
-      redis:
+      lago-redis:
         condition: service_healthy
     command: ["./scripts/start.clock.sh"]
     volumes:
@@ -243,7 +243,7 @@ services:
   # in official Lago compose. The main 'worker' service handles all queues.
   # Enable individual workers later for high-scale setups.
 
-  pdf:
+  lago-pdf:
     image: getlago/lago-gotenberg:8.15
     container_name: lago-pdf
     restart: unless-stopped
